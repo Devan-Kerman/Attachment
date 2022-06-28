@@ -16,6 +16,7 @@ dependencies {
 }
 ```
 
+Certain attachment providers support atomic operations `registerAtomicAttachment`, this is useful for data used in rendering or network stuff.
 ## Entity
 ```java
 public class MyAttachments {
