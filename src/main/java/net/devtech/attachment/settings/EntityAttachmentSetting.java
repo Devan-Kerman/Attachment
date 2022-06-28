@@ -10,6 +10,7 @@ import net.devtech.attachment.impl.serializer.ContextIdentifiedTrackedDataHandle
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.data.TrackedDataHandler;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.EntityTrackerEntry;
 import net.minecraft.util.Identifier;
@@ -29,6 +30,7 @@ public interface EntityAttachmentSetting extends AttachmentSetting {
 	
 	/**
 	 * A setting that makes this attachment synchronize to the clientside version of the entity {@link EntityTrackerEntry#sendPackets(Consumer)}
+	 * @see TrackedDataHandlerRegistry
 	 */
 	static <T> NetSerializer<T> sync(Identifier id, TrackedDataHandler<T> codec) {
 		return new NetSerializer<>(id, entity -> codec);

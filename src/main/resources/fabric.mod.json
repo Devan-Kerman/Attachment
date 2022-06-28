@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "attachment",
+  "id": "devtech_attachment",
   "version": "${version}",
   "name": "Attachment",
   "description": "basic data attachment to minecraft objects",
