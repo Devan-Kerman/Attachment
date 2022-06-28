@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "attachment",
+  "version": "${version}",
+  "name": "Attachment",
+  "description": "basic data attachment to minecraft objects",
+  "authors": [
+    "HalfOf2"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/attachment/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.devtech.attachment.impl.init.AttachmentInit"
+    ],
+    "client": [
+      "net.devtech.attachment.impl.init.AttachmentClientInit"
+    ]
+  },
+  "mixins": [
+    "attachment.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.8",
+    "fabric": "*",
+    "minecraft": "1.19"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.devtech.attachment.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "entity.EntityMixin_Component",
+    "entity.EntityTrackerEntryMixin",
+    "item.NbtCompoundMixin",
+    "world.ChunkRendererRegionAccess",
+    "world.WorldMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
