@@ -2,6 +2,19 @@
 
 Attach custom data to Entities, Worlds, and ItemStacks (NbtCompounds)
 
+## Gradle
+```groovy
+repositories {
+    maven {
+        url = uri("https://storage.googleapis.com/devan-maven/")
+    }
+}
+
+dependencies {
+  // there is no api (well except for render handler), just set maxCount in Item$Settings to values over 64
+  modRuntime(include("net.devtech:Attachment:1.0.0"))
+}
+```
 
 ## Entity
 ```java
