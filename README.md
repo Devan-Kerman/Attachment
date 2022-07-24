@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-  // there is no api (well except for render handler), just set maxCount in Item$Settings to values over 64
   modRuntime(include("net.devtech:Attachment:1.2.0"))
 }
 ```
