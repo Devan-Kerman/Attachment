@@ -8,23 +8,30 @@ import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.devtech.attachment.ServerRef;
 import net.devtech.attachment.impl.serializer.PacketSerializerList;
 import org.slf4j.Logger;
 
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.WorldChunk;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientLoginNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+@Environment(EnvType.CLIENT)
 public class AttachmentClientInit implements ClientModInitializer {
 	public static final Logger LOGGER = LogUtils.getLogger();
-	
 	@Override
 	public void onInitializeClient() {
 		// network id sync
@@ -73,7 +80,7 @@ public class AttachmentClientInit implements ClientModInitializer {
 				if(!handler.getConnection().isOpen()) {
 					return;
 				}
-				PacketSerializerList.ENTITY_LIST.readPacket(copy, buf1 -> {
+				PacketSerializerList.ENTITY.readPacket(copy, buf1 -> {
 					int entityId = copy.readInt();
 					ClientWorld world = client.world;
 					if(world == null) {
@@ -92,6 +99,39 @@ public class AttachmentClientInit implements ClientModInitializer {
 			});
 		});
 		
+		// chunk data sync
+		ClientPlayNetworking.registerGlobalReceiver(AttachmentInit.CHUNK_SYNC, (client, handler, buf, responseSender) -> {
+			PacketByteBuf copy = new PacketByteBuf(buf.copy());
+			client.executeSync(() -> {
+				if(!handler.getConnection().isOpen()) {
+					return;
+				}
+				PacketSerializerList.CHUNK.readPacket(copy, buf1 -> {
+					ClientWorld world = client.world;
+					if(world == null) {
+						LOGGER.warn("Player is not in world unable to process " + AttachmentInit.CHUNK_SYNC);
+						return null;
+					}
+					
+					RegistryKey<World> key = world.getRegistryKey();
+					RegistryKey<World> identifier = buf1.readRegistryKey(Registry.WORLD_KEY);
+					if(key != identifier) {
+						LOGGER.warn("Player is in world " + key.getValue() + " expected " + identifier + " cannot process " + AttachmentInit.CHUNK_SYNC);
+						return null;
+					}
+					
+					ChunkPos pos = buf1.readChunkPos();
+					WorldChunk chunk = world.getChunk(pos.x, pos.z);
+					if(chunk == null) {
+						LOGGER.warn("Unable to find chunk @ " + pos + " unable to process " + AttachmentInit.CHUNK_SYNC);
+						return null;
+					}
+					
+					return chunk;
+				});
+			});
+		});
+		
 		// world data sync
 		ClientPlayNetworking.registerGlobalReceiver(AttachmentInit.WORLD_SYNC, (client, handler, buf, responseSender) -> {
 			PacketByteBuf copy = new PacketByteBuf(buf.copy());
@@ -99,7 +139,7 @@ public class AttachmentClientInit implements ClientModInitializer {
 				if(!handler.getConnection().isOpen()) {
 					return;
 				}
-				PacketSerializerList.WORLD_LIST.readPacket(copy, buf1 -> {
+				PacketSerializerList.WORLD.readPacket(copy, buf1 -> {
 					ClientWorld world = client.world;
 					if(world == null) {
 						LOGGER.warn("Player is not in world unable to process " + AttachmentInit.WORLD_SYNC);
@@ -107,8 +147,8 @@ public class AttachmentClientInit implements ClientModInitializer {
 					}
 					
 					RegistryKey<World> key = world.getRegistryKey();
-					Identifier identifier = buf1.readIdentifier();
-					if(!key.getValue().equals(identifier)) {
+					RegistryKey<World> identifier = buf1.readRegistryKey(Registry.WORLD_KEY);
+					if(key != identifier) {
 						LOGGER.warn("Player is in world " + key.getValue() + " expected " + identifier + " cannot process " + AttachmentInit.WORLD_SYNC);
 						return null;
 					}
@@ -117,5 +157,24 @@ public class AttachmentClientInit implements ClientModInitializer {
 				});
 			});
 		});
+		
+		// server data sync
+		ClientPlayNetworking.registerGlobalReceiver(AttachmentInit.SERVER_SYNC, (client, handler, buf, responseSender) -> {
+			PacketByteBuf copy = new PacketByteBuf(buf.copy());
+			client.executeSync(() -> {
+				if(!handler.getConnection().isOpen()) {
+					return;
+				}
+				PacketSerializerList.SERVER.readPacket(copy, buf1 -> {
+					ClientPlayerEntity player = client.player;
+					if(player == null) {
+						LOGGER.warn("Player is not in world unable to process " + AttachmentInit.SERVER_SYNC);
+						return null;
+					}
+					return ServerRef.clientConnectedTo();
+				});
+			});
+		});
+		
 	}
 }

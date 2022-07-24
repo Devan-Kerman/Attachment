@@ -1,4 +1,4 @@
-package net.devtech.attachment.mixin.entity;
+package net.devtech.attachment.impl.asm.mixin.entity;
 
 import net.devtech.attachment.Attachment;
 import net.devtech.attachment.AttachmentProvider;
@@ -20,6 +20,9 @@ import net.minecraft.nbt.NbtElement;
 public class EntityMixin_Component {
 	public Object[] devtech_attach;
 	
+	/**
+	 * When entities cross dimensions they are actually copied for some godforsaken reason, so we must copy over the attachments
+	 */
 	@Inject(method = "copyFrom", at = @At("HEAD"))
 	public void copy(Entity original, CallbackInfo ci) {
 		for(AttachmentProvider.AttachmentPair<Entity, EntityAttachmentSetting> entry : Attachments.ENTITY.getAttachments()) {
@@ -27,7 +30,7 @@ public class EntityMixin_Component {
 		}
 	}
 	
-	@Unique
+	@Unique // generics moment
 	private <T> void devtech_copyAttachment(Entity original, Attachment<Entity, T> attachment) {
 		attachment.setValue((Entity) (Object) this, attachment.getValue(original));
 	}

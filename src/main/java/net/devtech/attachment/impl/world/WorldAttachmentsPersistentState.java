@@ -7,6 +7,9 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.World;
 
+/**
+ * Serializes world attachments
+ */
 public class WorldAttachmentsPersistentState extends PersistentState {
 	final World world;
 	

@@ -1,16 +1,25 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "net.devtech.attachment.mixin",
+  "package": "net.devtech.attachment.impl.asm.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "chunk.ChunkHolderMixin",
+    "chunk.ChunkSerializerMixin",
+    "chunk.ProtoChunkMixin",
+    "chunk.ReadOnlyChunkAccess",
+    "chunk.WorldChunkMixin_Deserialize",
     "entity.EntityMixin_Component",
     "entity.EntityTrackerEntryMixin",
     "item.NbtCompoundMixin",
+    "server.MinecraftServerAccess",
+    "server.MinecraftServerMixin",
+    "server.WorldSavePathAccess",
     "world.ChunkRendererRegionAccess",
     "world.WorldMixin"
   ],
   "client": [
+    "server.ClientPlayerEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

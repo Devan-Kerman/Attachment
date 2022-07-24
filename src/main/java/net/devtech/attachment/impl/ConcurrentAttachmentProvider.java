@@ -15,6 +15,10 @@ import net.devtech.attachment.AttachmentProvider;
 import net.devtech.attachment.AttachmentSetting;
 
 // maybe make custom provider for AttachableObject
+
+/**
+ * A concurrent version of {@link ArrayAttachmentProvider}
+ */
 public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extends AbstractAttachmentProvider<E, B>
 	implements AttachmentProvider.Atomic<E, B> {
 	private static final VarHandle ARRAY_ELEMENT_VAR_HANDLE = MethodHandles.arrayElementVarHandle(Object[].class);

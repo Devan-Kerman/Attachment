@@ -1,24 +1,24 @@
 package net.devtech.attachment.settings;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.mojang.serialization.Codec;
 import net.devtech.attachment.AttachmentSetting;
+import net.devtech.attachment.ServerRef;
 import net.devtech.attachment.impl.serializer.ContextIdentifiedCodec;
 import net.devtech.attachment.impl.serializer.ContextIdentifiedTrackedDataHandler;
 
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.data.TrackedDataHandler;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.World;
 
-public interface WorldAttachmentSetting extends AttachmentSetting {
+public interface ServerAttachmentSetting extends AttachmentSetting {
 	/**
-	 * A setting that makes this attachment serialized in a serverworld's nbt data {@link PersistentState#writeNbt(NbtCompound)}
+	 * A setting that makes this attachment serialized in a server's nbt data {@link MinecraftServer#getRunDirectory()}
 	 */
 	static <T> Serializer<T> serializer(Identifier id, Codec<T> codec) {
 		return new Serializer<>(id, world -> codec);
@@ -31,26 +31,26 @@ public interface WorldAttachmentSetting extends AttachmentSetting {
 		return new NetSerializer<>(id, world -> codec);
 	}
 	
-	record Serializer<T>(Identifier id, Function<World, Codec<T>> codecGetter) implements WorldAttachmentSetting, ContextIdentifiedCodec<World, T> {
+	record Serializer<T>(Identifier id, Function<ServerRef, Codec<T>> codecGetter) implements ServerAttachmentSetting, ContextIdentifiedCodec<ServerRef, T> {
 		@Override
 		public Identifier serializerId() {
 			return this.id;
 		}
 		
 		@Override
-		public Codec<T> codec(World entity) {
+		public Codec<T> codec(ServerRef entity) {
 			return this.codecGetter.apply(entity);
 		}
 	}
 	
-	record NetSerializer<T>(Identifier id, Function<World, TrackedDataHandler<T>> handlerGetter) implements WorldAttachmentSetting, ContextIdentifiedTrackedDataHandler<World, T> {
+	record NetSerializer<T>(Identifier id, Function<ServerRef, TrackedDataHandler<T>> handlerGetter) implements ServerAttachmentSetting, ContextIdentifiedTrackedDataHandler<ServerRef, T> {
 		@Override
 		public Identifier networkId() {
 			return this.id;
 		}
 		
 		@Override
-		public TrackedDataHandler<T> getTrackedHandler(World context) {
+		public TrackedDataHandler<T> getTrackedHandler(ServerRef context) {
 			return this.handlerGetter.apply(context);
 		}
 	}

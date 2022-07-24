@@ -1,6 +1,6 @@
 # Attachment
 
-Attach custom data to Entities, Worlds, Chunks, and ItemStacks (NbtCompounds)
+Attach custom data to Entities, Worlds, and ItemStacks (NbtCompounds)
 
 ## Gradle
 ```groovy
@@ -11,11 +11,11 @@ repositories {
 }
 
 dependencies {
-  modApi(include("net.devtech:Attachment:1.1.0"))
+  // there is no api (well except for render handler), just set maxCount in Item$Settings to values over 64
+  modRuntime(include("net.devtech:Attachment:1.2.0"))
 }
 ```
 
-Certain attachment providers support atomic operations `registerAtomicAttachment`, this is useful for data used in rendering or network stuff.
 ## Entity
 ```java
 public class MyAttachments {
@@ -34,11 +34,11 @@ World attachments are bound to `BlockRenderView` to allow them to be used in Bak
 
 ```java
 public class MyAttachments {
-	public static final Identifier ID = new Identifier("mymod:world_attachment");
+	public static final Identifier ID = new Identifier("mymod:entity_attachment");
 	// all settings are optional
 	public static final Attachment<BlockRenderView, Integer> WORLD_ATTACHMENT = Attachments.WORLD.registerAttachment(
-			WorldAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the world is written to the disk
-            WorldAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
+			EntityAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the world is written to the disk
+            EntityAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
     );
 }
 ```
@@ -48,31 +48,14 @@ World attachments are bound to `BlockRenderView` to allow them to be used in Bak
 
 ```java
 public class MyAttachments {
-	public static final Identifier ID = new Identifier("mymod:nbt_attachment");
+	public static final Identifier ID = new Identifier("mymod:entity_attachment");
 	// all settings are optional, but recommended
 	public static final Attachment<NbtCompound, Integer> NBT_ATTACHMENT = Attachments.NBT.registerAttachment(
-			NbtAttachmentSetting.serializer(ID, Codec.INT) // saves the data when the nbt tag is written to the disk
+			EntityAttachmentSetting.serializer(ID, Codec.INT) // saves the data when the nbt tag is written to the disk
     );
 	
 	public static void set(ItemStack stack, int value) {
 		NBT_ATTACHMENT.setValue(stack.getOrCreateNbt(), value);
-    }
-}
-```
-
-## Chunks
-Chunk attachments are bound to `Chunk` to allow passing `ReadOnlyChunk`. You cannot attach data to EmptyChunk or ProtoChunk.
-```java
-public class MyAttachments {
-	public static final Identifier ID = new Identifier("mymod:chunk_attachment");
-	// all settings are optional, but recommended
-	public static final Attachment<Chunk, Integer> NBT_ATTACHMENT = Attachments.CHUNK.registerAttachment(
-			ChunkAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the nbt tag is written to the disk
-			WorldAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
-    );
-	
-	public static void set(Chunk chunk, int value) {
-		NBT_ATTACHMENT.setValue(chunk, value);
     }
 }
 ```

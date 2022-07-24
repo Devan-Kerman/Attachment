@@ -1,4 +1,4 @@
-package net.devtech.attachment.mixin.entity;
+package net.devtech.attachment.impl.asm.mixin.entity;
 
 import java.util.function.Consumer;
 
@@ -20,6 +20,9 @@ import net.minecraft.server.network.EntityTrackerEntry;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
+/**
+ * Synchronize data with the client
+ */
 @Mixin(EntityTrackerEntry.class)
 public abstract class EntityTrackerEntryMixin {
 	@Shadow
@@ -27,6 +30,9 @@ public abstract class EntityTrackerEntryMixin {
 	
 	@Shadow @Final private Entity entity;
 	
+	/**
+	 * Fired when an entity first enters a client's render distance
+	 */
 	@Inject(method = "sendPackets", at = @At("HEAD"))
 	public void send(Consumer<Packet<?>> sender, CallbackInfo ci) {
 		Packet<?> packet = this.createSyncPacket(true);
@@ -35,6 +41,9 @@ public abstract class EntityTrackerEntryMixin {
 		}
 	}
 	
+	/**
+	 * Fired every once in-awhile, only god knows the interval
+	 */
 	@Inject(method = "syncEntityData", at = @At("HEAD"))
 	public void sync(CallbackInfo ci) {
 		Packet<?> packet = this.createSyncPacket(false);
@@ -46,7 +55,7 @@ public abstract class EntityTrackerEntryMixin {
 	@Unique
 	@Nullable
 	private Packet<?> createSyncPacket(boolean force) {
-		PacketByteBuf buf = PacketSerializerList.ENTITY_LIST.writePacket(
+		PacketByteBuf buf = PacketSerializerList.ENTITY.writePacket(
 				this.entity,
 				(entity1, idBuf) -> idBuf.writeInt(entity1.getId()),
 				force

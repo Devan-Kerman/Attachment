@@ -15,7 +15,7 @@ import net.devtech.attachment.Attachment;
 import net.devtech.attachment.AttachmentProvider;
 import net.devtech.attachment.AttachmentSetting;
 import net.devtech.attachment.Attachments;
-import net.devtech.attachment.impl.DirtyableAttachment;
+import net.devtech.attachment.ServerRef;
 import org.apache.commons.lang3.SerializationException;
 
 import net.minecraft.entity.Entity;
@@ -24,11 +24,18 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.BlockRenderView;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.WorldChunk;
 
+/**
+ * Maintains a list of attachments that have a {@link ContextIdentifiedCodec} for serialization purposes.
+ */
 public final class CodecSerializerList<O> {
 	public static final CodecSerializerList<Entity> ENTITY = new CodecSerializerList<>(Attachments.ENTITY);
 	public static final CodecSerializerList<BlockRenderView> WORLD = new CodecSerializerList<>(Attachments.WORLD);
+	public static final CodecSerializerList<Chunk> CHUNK = new CodecSerializerList<>(Attachments.CHUNK);
 	public static final CodecSerializerList<NbtCompound> NBT = new CodecSerializerList<>(Attachments.NBT);
+	public static final CodecSerializerList<ServerRef> SERVER = new CodecSerializerList<>(Attachments.SERVER);
 	
 	public final List<Entry<O, ?>> entries = new Vector<>();
 	
@@ -62,6 +69,9 @@ public final class CodecSerializerList<O> {
 		this.read(NbtOps.INSTANCE, context, element);
 	}
 	
+	/**
+	 * @return if everything was null and there was nothing to serialize
+	 */
 	public <T> T write(DynamicOps<T> ops, O context) {
 		RecordBuilder<T> builder = ops.mapBuilder();
 		boolean write = false;

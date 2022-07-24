@@ -7,6 +7,7 @@ import com.google.common.collect.ForwardingMap;
 import com.mojang.datafixers.util.Pair;
 import net.devtech.attachment.impl.DirtyableAttachment;
 import net.devtech.attachment.impl.serializer.CodecSerializerList;
+import org.jetbrains.annotations.NotNull;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -19,14 +20,6 @@ public class NbtMap extends ForwardingMap<String, NbtElement> {
 		NbtCompound compound = read.getCompound(KEY);
 		if(compound != null && !(compound instanceof Wrapper)) {
 			CodecSerializerList.NBT.read(read, compound);
-			
-			// data is already serialized we don't need to serialize it
-			for(CodecSerializerList.Entry<NbtCompound, ?> entry : CodecSerializerList.NBT.entries) {
-				if(entry.attachment() instanceof DirtyableAttachment a) {
-					a.consumeNetworkDirtiness(read);
-				}
-			}
-			
 			NbtMap entries = new NbtMap(read);
 			read.put(KEY, new Wrapper(entries));
 		}
@@ -50,7 +43,7 @@ public class NbtMap extends ForwardingMap<String, NbtElement> {
 	
 	boolean serializationLock = false;
 	@Override
-	protected Map<String, NbtElement> delegate() {
+	protected @NotNull Map<String, NbtElement> delegate() {
 		if(!this.serializationLock) {
 			this.serializationLock = true;
 			try {

@@ -7,11 +7,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Codec;
 import net.devtech.attachment.impl.item.NbtMap;
-import net.devtech.attachment.mixin.world.ChunkRendererRegionAccess;
+import net.devtech.attachment.impl.asm.mixin.chunk.ReadOnlyChunkAccess;
+import net.devtech.attachment.impl.asm.mixin.world.ChunkRendererRegionAccess;
+import net.devtech.attachment.settings.ChunkAttachmentSetting;
 import net.devtech.attachment.settings.EntityAttachmentSetting;
 import net.devtech.attachment.settings.NbtAttachmentSetting;
+import net.devtech.attachment.settings.ServerAttachmentSetting;
 import net.devtech.attachment.settings.WorldAttachmentSetting;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -21,12 +23,14 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.WorldChunk;
 
 import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
 import net.fabricmc.fabric.api.renderer.v1.render.RenderContext;
@@ -41,6 +45,27 @@ public class Attachments {
 	 * Attach custom data to an entity, allows for synchronization & serialization, as well as custom behavior on player respawn
 	 */
 	public static final AttachmentProvider.Atomic<Entity, EntityAttachmentSetting> ENTITY = AttachmentProvider.atomic(VarHandles.ENTITY);
+	public static final AttachmentProvider.Atomic<Chunk, ChunkAttachmentSetting> CHUNK = AttachmentProvider.atomic(chunk -> {
+		WorldChunk from = from(chunk);
+		return (Object[]) VarHandles.WORLD_CHUNK.getVolatile(from);
+	}, (obj, expected, set) -> {
+		WorldChunk world = from(obj);
+		return VarHandles.WORLD_CHUNK.compareAndSet(world, expected, set);
+	});
+	
+	public static final AttachmentProvider.Atomic<ServerRef, ServerAttachmentSetting> SERVER = AttachmentProvider.atomic(server -> {
+		if(server instanceof ServerRef.Server s) {
+			return (Object[]) VarHandles.SERVER.getVolatile(s.reference());
+		} else {
+			return (Object[]) VarHandles.CLIENT_PLAYER_ENTITY_SERVER_DATA.getVolatile(server.getRef());
+		}
+	}, (obj, expected, set) -> {
+		if(obj instanceof ServerRef.Server s) {
+			return VarHandles.SERVER.compareAndSet(s.reference(), expected, set);
+		} else {
+			return VarHandles.CLIENT_PLAYER_ENTITY_SERVER_DATA.compareAndSet(obj.getRef(), expected, set);
+		}
+	});
 	
 	/**
 	 * Attach custom data to a world, such information can be accessed from
@@ -107,4 +132,15 @@ public class Attachments {
 		Objects.requireNonNull(world, "Unable to find World for " + view.getClass());
 		return world;
 	}
+	
+	public static WorldChunk from(Chunk chunk) {
+		if(chunk instanceof WorldChunk worldChunk) {
+			return worldChunk;
+		} else if(chunk instanceof ReadOnlyChunkAccess access) {
+			return access.getWrapped();
+		} else {
+			return null;
+		}
+	}
+	
 }

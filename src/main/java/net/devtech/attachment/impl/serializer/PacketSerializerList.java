@@ -19,6 +19,7 @@ import net.devtech.attachment.Attachment;
 import net.devtech.attachment.AttachmentProvider;
 import net.devtech.attachment.AttachmentSetting;
 import net.devtech.attachment.Attachments;
+import net.devtech.attachment.ServerRef;
 import net.devtech.attachment.impl.DirtyableAttachment;
 import net.devtech.attachment.impl.init.AttachmentInit;
 import org.jetbrains.annotations.Nullable;
@@ -28,13 +29,16 @@ import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.BlockRenderView;
+import net.minecraft.world.chunk.Chunk;
 
 public class PacketSerializerList<O> {
 	public static final Logger LOGGER = LogUtils.getLogger();
 	private static final AtomicInteger ID = new AtomicInteger();
 	public static final Map<Identifier, PacketSerializerList<?>> SERIALIZER_LISTS = new ConcurrentHashMap<>();
-	public static final PacketSerializerList<Entity> ENTITY_LIST = new PacketSerializerList<>(Attachments.ENTITY, AttachmentInit.ENTITY_SYNC);
-	public static final PacketSerializerList<BlockRenderView> WORLD_LIST = new PacketSerializerList<>(Attachments.WORLD, AttachmentInit.WORLD_SYNC);
+	public static final PacketSerializerList<Entity> ENTITY = new PacketSerializerList<>(Attachments.ENTITY, AttachmentInit.ENTITY_SYNC);
+	public static final PacketSerializerList<BlockRenderView> WORLD = new PacketSerializerList<>(Attachments.WORLD, AttachmentInit.WORLD_SYNC);
+	public static final PacketSerializerList<Chunk> CHUNK = new PacketSerializerList<>(Attachments.CHUNK, AttachmentInit.CHUNK_SYNC);
+	public static final PacketSerializerList<ServerRef> SERVER = new PacketSerializerList<>(Attachments.SERVER, AttachmentInit.SERVER_SYNC);
 	
 	public static Int2ObjectMap<PacketSerializerList<?>> clientIds;
 	

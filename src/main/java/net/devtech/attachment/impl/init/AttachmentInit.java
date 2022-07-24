@@ -2,39 +2,50 @@ package net.devtech.attachment.impl.init;
 
 import static net.devtech.attachment.impl.init.AttachmentClientInit.LOGGER;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.Objects;
 
-import com.mojang.serialization.Codec;
 import io.netty.buffer.Unpooled;
 import net.devtech.attachment.Attachment;
 import net.devtech.attachment.AttachmentProvider;
 import net.devtech.attachment.Attachments;
+import net.devtech.attachment.ServerRef;
 import net.devtech.attachment.impl.EnumAttributeList;
+import net.devtech.attachment.impl.asm.mixin.server.MinecraftServerAccess;
+import net.devtech.attachment.impl.asm.mixin.server.WorldSavePathAccess;
+import net.devtech.attachment.impl.event.ServerSaveCallback;
+import net.devtech.attachment.impl.serializer.CodecSerializerList;
 import net.devtech.attachment.impl.serializer.PacketSerializerList;
 import net.devtech.attachment.impl.world.WorldAttachmentsPersistentState;
 import net.devtech.attachment.settings.EntityAttachmentSetting;
-import net.devtech.attachment.settings.NbtAttachmentSetting;
-import net.devtech.attachment.settings.WorldAttachmentSetting;
-import org.spongepowered.asm.mixin.injection.At;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.util.Util;
+import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.level.storage.LevelStorage;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
@@ -43,9 +54,13 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 public class AttachmentInit implements ModInitializer {
+	public static final WorldSavePath WORLD_SAVE_PATH = WorldSavePathAccess.createWorldSavePath("devtech_attachment");
+	
 	public static final Identifier NETWORK_ID_SYNC = new Identifier("devtech:netids");
 	public static final Identifier ENTITY_SYNC = new Identifier("devtech:entity_sync");
 	public static final Identifier WORLD_SYNC = new Identifier("devtech:world_sync");
+	public static final Identifier CHUNK_SYNC = new Identifier("devtech:chunk_sync");
+	public static final Identifier SERVER_SYNC = new Identifier("devtech:server_sync");
 	
 	@Override
 	public void onInitialize() {
@@ -78,12 +93,12 @@ public class AttachmentInit implements ModInitializer {
 		// copy entity data for players
 		ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
 			if(!alive) {
-				for(EnumAttributeList.Entry<Entity, ?> entry : EnumAttributeList.PLAYER_DEATH_ENTITY.entries) {
-					this.devtech_copyAttachment(oldPlayer, entry.attachment());
+				for(var entry : EnumAttributeList.PLAYER_DEATH_ENTITY.entries) {
+					this.devtech_copyAttachment(oldPlayer, entry);
 				}
 				if(newPlayer.world.getGameRules().getBoolean(GameRules.KEEP_INVENTORY) || oldPlayer.isSpectator()) {
-					for(EnumAttributeList.Entry<Entity, ?> entry : EnumAttributeList.PLAYER_DEATH_ENTITY_KEEP_INVENTORY.entries) {
-						this.devtech_copyAttachment(oldPlayer, entry.attachment());
+					for(var entry : EnumAttributeList.PLAYER_DEATH_ENTITY_KEEP_INVENTORY.entries) {
+						this.devtech_copyAttachment(oldPlayer, entry);
 					}
 				}
 			} else {
@@ -122,7 +137,7 @@ public class AttachmentInit implements ModInitializer {
 		});
 		
 		// sync every once in awhile
-		ServerTickEvents.START_WORLD_TICK.register(world -> {
+		ServerTickEvents.END_WORLD_TICK.register(world -> {
 			// slight offset to prevent us from syncing all data at the same time everyone else does their once-per-second tasks
 			if((world.getTime()+3) % 20 == 0) {
 				Packet<?> packet = createWorldSyncPacket(world, false);
@@ -133,16 +148,69 @@ public class AttachmentInit implements ModInitializer {
 				}
 			}
 		});
+		
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			if((server.getTicks()+6) % 20 == 0) {
+				Packet<?> packet = createServerSyncPacket(server, false);
+				if(packet != null) {
+					server.getPlayerManager().sendToAll(packet);
+				}
+			}
+		});
+		
+		ServerSaveCallback.EVENT.register((server, session, suppressLogs, flush, force, registryManager, saveProperties) -> {
+			Path directory = session.getDirectory(WORLD_SAVE_PATH);
+			try {
+				Files.createDirectories(directory);
+			} catch(IOException e) {
+				throw new RuntimeException(e);
+			}
+			
+			NbtElement write = CodecSerializerList.SERVER.write(ServerRef.of(server));
+			Path temp = directory.resolve("tmp.dat"), main = directory.resolve("devtech_attach.dat");
+			NbtCompound compound = new NbtCompound();
+			compound.put("contents", write);
+			try(OutputStream oos = Files.newOutputStream(temp)) {
+				NbtIo.writeCompressed(compound, oos);
+				Files.move(temp, main, StandardCopyOption.REPLACE_EXISTING); // if success, write to file
+			} catch(IOException e) {
+				throw new RuntimeException(e);
+			}
+		});
+		
+		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+			LevelStorage.Session session = ((MinecraftServerAccess) server).getSession();
+			Path directory = session.getDirectory(WORLD_SAVE_PATH);
+			Path main = directory.resolve("devtech_attach.dat");
+			if(Files.exists(main)) {
+				try(InputStream input = Files.newInputStream(main)) {
+					NbtCompound compound = NbtIo.readCompressed(input);
+					NbtElement contents = compound.get("contents");
+					Objects.requireNonNull(contents, "contents must be non-null!");
+					CodecSerializerList.SERVER.read(ServerRef.of(server), contents);
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		});
 	}
 	
 	public static Packet<?> createWorldSyncPacket(World world, boolean force) {
-		PacketByteBuf buf = PacketSerializerList.WORLD_LIST.writePacket(world, (view, idBuf) -> {
-			idBuf.writeIdentifier(world.getRegistryKey().getValue());
+		PacketByteBuf buf = PacketSerializerList.WORLD.writePacket(world, (view, idBuf) -> {
+			idBuf.writeRegistryKey(world.getRegistryKey());
 		}, force);
 		if(buf == null) {
 			return null;
 		}
 		return ServerPlayNetworking.createS2CPacket(AttachmentInit.WORLD_SYNC, buf);
+	}
+	
+	public static Packet<?> createServerSyncPacket(MinecraftServer server, boolean force) {
+		PacketByteBuf buf = PacketSerializerList.SERVER.writePacket(ServerRef.of(server), (view, idBuf) -> {}, force);
+		if(buf == null) {
+			return null;
+		}
+		return ServerPlayNetworking.createS2CPacket(AttachmentInit.SERVER_SYNC, buf);
 	}
 	
 	private <T> void devtech_copyAttachment(Entity original, Attachment<Entity, T> attachment) {

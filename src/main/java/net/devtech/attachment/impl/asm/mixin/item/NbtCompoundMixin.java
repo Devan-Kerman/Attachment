@@ -1,4 +1,4 @@
-package net.devtech.attachment.mixin.item;
+package net.devtech.attachment.impl.asm.mixin.item;
 
 import org.spongepowered.asm.mixin.Mixin;
 
