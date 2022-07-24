@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-  modApi(include("net.devtech:Attachment:1.0.0"))
+  modApi(include("net.devtech:Attachment:1.1.0"))
 }
 ```
 
