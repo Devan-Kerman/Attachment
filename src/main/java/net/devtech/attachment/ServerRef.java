@@ -17,6 +17,9 @@ public interface ServerRef {
 		return new Server(server);
 	}
 	
+	/**
+	 * Reference to the currently connected server on the client. This allows for accessing component data on the client.
+	 */
 	@Environment(EnvType.CLIENT)
 	static ServerRef clientConnectedTo() {
 		return Client.CURRENTLY_CONNECTED;

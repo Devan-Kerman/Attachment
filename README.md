@@ -33,27 +33,45 @@ World attachments are bound to `BlockRenderView` to allow them to be used in Bak
 
 ```java
 public class MyAttachments {
-	public static final Identifier ID = new Identifier("mymod:entity_attachment");
+	public static final Identifier ID = new Identifier("mymod:world_attachment");
 	// all settings are optional
 	public static final Attachment<BlockRenderView, Integer> WORLD_ATTACHMENT = Attachments.WORLD.registerAttachment(
-			EntityAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the world is written to the disk
-            EntityAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
+			WorldAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the world is written to the disk
+            WorldAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
     );
 }
 ```
 
 ## Item / NbtCompound
-World attachments are bound to `BlockRenderView` to allow them to be used in BakedModel rendering
+Nbt attachments are bound to `NbtCompound` to allow them to be used in ItemStacks and regular Nbt.
 
 ```java
 public class MyAttachments {
-	public static final Identifier ID = new Identifier("mymod:entity_attachment");
+	public static final Identifier ID = new Identifier("mymod:item_attachment");
 	// all settings are optional, but recommended
 	public static final Attachment<NbtCompound, Integer> NBT_ATTACHMENT = Attachments.NBT.registerAttachment(
-			EntityAttachmentSetting.serializer(ID, Codec.INT) // saves the data when the nbt tag is written to the disk
+			NbtAttachmentSetting.serializer(ID, Codec.INT) // saves the data when the nbt tag is written to the disk
     );
 	
 	public static void set(ItemStack stack, int value) {
+		NBT_ATTACHMENT.setValue(stack.getOrCreateNbt(), value);
+    }
+}
+```
+
+## Server
+
+```java
+public class MyAttachments {
+	public static final Identifier ID = new Identifier("mymod:server_attachment");
+	// all settings are optional, but recommended
+	public static final Attachment<ServerRef, Integer> NBT_ATTACHMENT = Attachments.SERVER.registerAttachment(
+			ServerAttachmentSetting.serializer(ID, Codec.INT), // saves the data when the nbt tag is written to the disk
+			ServerAttachmentSetting.sync(ID, TrackedDataHandlerRegistry.INTEGER) // syncs the data to the client
+	
+	);
+	
+	public static void set(ServerRef stack, int value) {
 		NBT_ATTACHMENT.setValue(stack.getOrCreateNbt(), value);
     }
 }
