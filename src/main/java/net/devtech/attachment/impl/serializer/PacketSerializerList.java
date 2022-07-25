@@ -53,17 +53,9 @@ public class PacketSerializerList<O> {
 	public record Entry<O, T>(Attachment<O, T> attachment, ContextIdentifiedTrackedDataHandler<O, T> serializer) {}
 	
 	public PacketSerializerList(AttachmentProvider<O, ?> provider, Identifier id) {
-		if(locked) {
-			throw new IllegalStateException("cannot register networked attachments after player join!");
-		}
-		
 		this.id = id;
 		Set<Identifier> identifiers = Collections.newSetFromMap(new ConcurrentHashMap<>());
 		provider.registerAndRunListener((attachment, behavior) -> {
-			if(locked) {
-				throw new IllegalStateException("cannot register networked attachments after player join!");
-			}
-			
 			boolean added = false;
 			for(AttachmentSetting setting : behavior) {
 				if(setting instanceof ContextIdentifiedTrackedDataHandler c) {
@@ -73,7 +65,10 @@ public class PacketSerializerList<O> {
 					if(!identifiers.add(c.networkId())) {
 						throw new IllegalArgumentException("Duplicate serializers with id " + c.networkId());
 					}
-					//noinspection unchecked,rawtypes
+					if(locked) {
+						throw new IllegalStateException("cannot register networked attachments after player join!");
+					}
+					
 					this.entries.add(new Entry<>(attachment, c));
 					added = true;
 				}

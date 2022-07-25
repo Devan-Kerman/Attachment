@@ -61,7 +61,7 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 		@Override
 		public T getValue(E object) {
 			Object[] apply = ConcurrentAttachmentProvider.this.getVolatile.apply(object);
-			if(apply == null) {
+			if(apply == null || this.index >= apply.length) {
 				return null;
 			} else {
 				//noinspection unchecked
@@ -131,7 +131,7 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 		@Override
 		public T getValue(E object) {
 			Object[] apply = ConcurrentAttachmentProvider.this.getVolatile.apply(object);
-			if(apply == null) {
+			if(apply == null || this.index >= apply.length) {
 				return null;
 			} else {
 				//noinspection unchecked

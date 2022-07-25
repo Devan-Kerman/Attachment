@@ -58,7 +58,7 @@ public class ArrayAttachmentProvider<E, B extends AttachmentSetting> extends Abs
 		@Override
 		public T getValue(E object) {
 			Object[] apply = ArrayAttachmentProvider.this.arrayGetter.apply(object);
-			if(apply == null) {
+			if(apply == null || this.index >= apply.length) {
 				return null;
 			} else {
 				return (T) apply[this.index];
