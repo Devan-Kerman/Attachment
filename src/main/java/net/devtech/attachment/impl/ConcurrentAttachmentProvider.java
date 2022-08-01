@@ -118,7 +118,7 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 	static Object[] copyOfVolatile(Object[] arr, int newLen) {
 		Object[] new_ = new Object[newLen];
 		for(int i = 0; i < arr.length; i++) {
-			new_[i] = ARRAY_ELEMENT_VAR_HANDLE.getVolatile(arr, newLen);
+			new_[i] = ARRAY_ELEMENT_VAR_HANDLE.getVolatile(arr, i);
 		}
 		return new_;
 	}

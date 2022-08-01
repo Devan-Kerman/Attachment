@@ -168,13 +168,23 @@ public class AttachmentInit implements ModInitializer {
 			
 			NbtElement write = CodecSerializerList.SERVER.write(ServerRef.of(server));
 			Path temp = directory.resolve("tmp.dat"), main = directory.resolve("devtech_attach.dat");
-			NbtCompound compound = new NbtCompound();
-			compound.put("contents", write);
-			try(OutputStream oos = Files.newOutputStream(temp)) {
-				NbtIo.writeCompressed(compound, oos);
-				Files.move(temp, main, StandardCopyOption.REPLACE_EXISTING); // if success, write to file
-			} catch(IOException e) {
-				throw new RuntimeException(e);
+			if(write != null) {
+				NbtCompound compound = new NbtCompound();
+				compound.put("contents", write);
+				try (OutputStream oos = Files.newOutputStream(temp)) {
+					NbtIo.writeCompressed(compound, oos);
+					Files.move(temp, main, StandardCopyOption.REPLACE_EXISTING); // if success, write to file
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			} else {
+				try {
+					Files.deleteIfExists(main);
+					Files.deleteIfExists(temp);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+
 			}
 		});
 		
