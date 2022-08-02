@@ -188,7 +188,7 @@ public class AttachmentInit implements ModInitializer {
 			}
 		});
 		
-		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			LevelStorage.Session session = ((MinecraftServerAccess) server).getSession();
 			Path directory = session.getDirectory(WORLD_SAVE_PATH);
 			Path main = directory.resolve("devtech_attach.dat");

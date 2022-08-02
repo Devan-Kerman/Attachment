@@ -118,9 +118,9 @@ public final class CodecSerializerList<O> {
 			// throw hard on write
 			DataResult<E> result = codec.encodeStart(ops, value);
 			var either = result.get();
-			either.ifRight(partial -> {
-				throw new SerializationException("Unable to serialize " + context + " because " + partial.message());
-			});
+			//either.ifRight(partial -> {
+			//	throw new SerializationException("Unable to serialize " + context + " because " + partial.message());
+			//});
 			return Pair.of(identifier, either.left().orElse(null));
 		} else {
 			return Pair.of(identifier, null);
