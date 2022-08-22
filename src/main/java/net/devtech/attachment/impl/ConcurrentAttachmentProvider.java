@@ -53,6 +53,7 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 		final int index;
 		final Lock dirtyLock = new ReentrantLock();
 		final Set<E> dirty = Collections.newSetFromMap(new WeakHashMap<>());
+		boolean trackDirty = ConcurrentAttachmentProvider.this.trackDirty;
 		
 		public CASAttachmentImpl(int index) {
 			this.index = index;
@@ -71,17 +72,22 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 		
 		@Override
 		public boolean consumeNetworkDirtiness(E entity) {
-			Lock lock = this.dirtyLock;
-			lock.lock();
-			try {
-				return this.dirty.remove(entity);
-			} finally {
-				lock.unlock();
+			if(this.trackDirty) {
+				Lock lock = this.dirtyLock;
+				lock.lock();
+				try {
+					return this.dirty.remove(entity);
+				} finally {
+					lock.unlock();
+				}
+			} else {
+				return true;
 			}
 		}
 		
-		void markDirty(E object) {
-			if(ConcurrentAttachmentProvider.this.trackDirty) {
+		@Override
+		public void markDirty(E object) {
+			if(this.trackDirty) {
 				Lock lock = this.dirtyLock;
 				lock.lock();
 				try {
@@ -90,6 +96,17 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 					lock.unlock();
 				}
 			}
+		}
+
+		@Override
+		public Attachment<E, T> useDirtiness(boolean shouldTrack) {
+			this.trackDirty = shouldTrack;
+			return this;
+		}
+
+		@Override
+		public boolean usesDirtiness() {
+			return this.trackDirty;
 		}
 
 		@Override
@@ -112,7 +129,6 @@ public class ConcurrentAttachmentProvider<E, B extends AttachmentSetting> extend
 		public AttachmentProvider<E, ?> getProvider() {
 			return ConcurrentAttachmentProvider.this;
 		}
-		
 	}
 
 	static Object[] copyOfVolatile(Object[] arr, int newLen) {

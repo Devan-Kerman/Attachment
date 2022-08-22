@@ -14,8 +14,7 @@ import net.devtech.attachment.AttachmentSetting;
 public class ArrayAttachmentProvider<E, B extends AttachmentSetting> extends AbstractAttachmentProvider<E, B> {
 	final Function<E, Object[]> arrayGetter;
 	final BiConsumer<E, Object[]> arraySetter;
-	
-	
+
 	public ArrayAttachmentProvider(
 			Function<E, Object[]> arrayGetter, BiConsumer<E, Object[]> arraySetter) {
 		this.arrayGetter = arrayGetter;
@@ -50,11 +49,30 @@ public class ArrayAttachmentProvider<E, B extends AttachmentSetting> extends Abs
 	public class AttachmentImpl<T> implements Attachment<E, T>, DirtyableAttachment<E> {
 		final Set<E> dirty = Collections.newSetFromMap(new WeakHashMap<>());
 		final int index;
+		boolean trackDirty = ArrayAttachmentProvider.this.trackDirty;
 		
 		public AttachmentImpl(int index) {
 			this.index = index;
 		}
-		
+
+		@Override
+		public Attachment<E, T> useDirtiness(boolean shouldTrack) {
+			this.trackDirty = shouldTrack;
+			return this;
+		}
+
+		@Override
+		public boolean usesDirtiness() {
+			return this.trackDirty;
+		}
+
+		@Override
+		public void markDirty(E object) {
+			if(this.trackDirty) {
+				this.dirty.add(object);
+			}
+		}
+
 		@Override
 		public T getValue(E object) {
 			Object[] apply = ArrayAttachmentProvider.this.arrayGetter.apply(object);
@@ -70,9 +88,7 @@ public class ArrayAttachmentProvider<E, B extends AttachmentSetting> extends Abs
 			int index = this.index;
 			Object[] arr = ArrayAttachmentProvider.this.getDataArray(object, index);
 			arr[index] = value;
-			if(ArrayAttachmentProvider.this.trackDirty) {
-				this.dirty.add(object);
-			}
+			this.markDirty(object);
 		}
 		
 		@Override
@@ -82,7 +98,7 @@ public class ArrayAttachmentProvider<E, B extends AttachmentSetting> extends Abs
 		
 		@Override
 		public boolean consumeNetworkDirtiness(E entity) {
-			return this.dirty.remove(entity);
+			return !this.trackDirty || this.dirty.remove(entity);
 		}
 	}
 }

@@ -14,6 +14,23 @@ public interface Attachment<O, T> {
 
 	void setValue(O object, T value);
 
+	/**
+	 * Set whether this attachment should use dirtyable optimizations for supported targets.
+	 * <p>
+	 *     <b>NBT Components: If an attachment isn't dirty it isn't re-serialized</b>
+	 *     <b>Networked Components (world, BE, entity): If an attachment isn't dirty, it isn't synchronized with the client</b>
+	 * </p>
+	 */
+	Attachment<O, T> useDirtiness(boolean shouldTrack);
+
+	boolean usesDirtiness();
+
+	/**
+	 * Forces a component as dirty.
+	 * Only works if {@link #useDirtiness(boolean)} returns true.
+	 */
+	void markDirty(O object);
+
 	default T getOrDefault(O object, T default_) {
 		T value = this.getValue(object);
 		return value == null ? default_ : value;
