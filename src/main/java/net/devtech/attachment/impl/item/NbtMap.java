@@ -7,6 +7,7 @@ import com.google.common.collect.ForwardingMap;
 import com.mojang.datafixers.util.Pair;
 import net.devtech.attachment.impl.DirtyableAttachment;
 import net.devtech.attachment.impl.serializer.CodecSerializerList;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
 import net.minecraft.nbt.NbtCompound;
@@ -15,13 +16,13 @@ import net.minecraft.nbt.NbtOps;
 
 public class NbtMap extends ForwardingMap<String, NbtElement> {
 	public static final String KEY = "attachment:nbt";
-	
+
 	public static void initRead(NbtCompound read) {
 		NbtCompound compound = read.getCompound(KEY);
 		if(compound != null && !(compound instanceof Wrapper)) {
-			CodecSerializerList.NBT.read(read, compound);
 			NbtMap entries = new NbtMap(read);
 			read.put(KEY, new Wrapper(entries));
+			CodecSerializerList.NBT.read(read, compound);
 		}
 	}
 	
